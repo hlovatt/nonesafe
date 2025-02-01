@@ -133,3 +133,4 @@ TODO
 3. Allow ``declare`` to be used as a class decorator.
 4. Decorated classes can provide defaults other
    than ``None``.
+
