@@ -6,7 +6,7 @@
 License: https://creativecommons.org/licenses/by/4.0/
 -----------------------------------------------------
 
-`nonesafe` makes it safe to parse dictionaries.
+``nonesafe`` makes it safe to parse dictionaries.
 
 When parsing a dictionary from an external source,
 a JSON request,
@@ -104,3 +104,32 @@ and there inclusion has previously been rejected
 in favour of dataclasses
 (`PEP 557 <https://peps.python.org/pep-0557/>`_).
 
+There is also a rejected
+`PEP 505 <https://peps.python.org/pep-0505/>`_
+and a proposal to revive it
+`Revisiting PEP 505 <https://discuss.python.org/t/revisiting-pep-505/74568>`_
+that failed to reach a consensus.
+505 proposed introducing new ``None`` aware operators
+``??`` (same as ``onnone``), ``?.``, and ``?[]``
+(last too equivalent to ``declare``'s behaviour).
+This module is considerably easier to add
+than three operators
+(current proof on concept circa 60 lines)
+and is arguably superior, because it is declarative.
+Note operators also need to be added to IDE's,
+type-checkers, etc. and need to be taught.
+For newbies and none computer-science people they
+will be unfamiliar.
+
+TODO
+====
+1. Check field value is of correct type or ``None``
+   (auto-convert if possible).
+   Presently ugly error!
+2. Add ``todict``: should 'extras' not parsed be
+   added back in?
+   Should ``None`` be omitted?
+   Yes & Yes.
+3. Allow ``declare`` to be used as a class decorator.
+4. Decorated classes can provide defaults other
+   than ``None``.
