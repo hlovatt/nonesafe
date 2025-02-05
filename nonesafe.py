@@ -2,20 +2,17 @@ __author__ = "Howard C Lovatt."
 __copyright__ = "Howard C Lovatt, 2025 onwards."
 __license__ = "MIT https://opensource.org/licenses/MIT"
 __repository__ = "https://github.com/hlovatt/nonesafe"
-__version__ = "0.0.0"
+__version__ = "0.1.0"
 
-from collections.abc import Mapping, Iterable
+from abc import ABC, abstractmethod
+from collections.abc import Mapping, Iterable, Sequence, Callable
 from typing import Any, Final
 
-#TODO Check field value is of correct type or `None` (auto-convert if possible). Presently ugly error!
-#TODO Add `todict`: should 'extras' not parsed be added back in? Should `None` be omitted? Yes & Yes.
-#TODO Allow `declare` to be used as a class decorator.
-#TODO Decorated classes can provide defaults other than `None`.
-
 class _NSMarker:
-    ...
+    def todict(self: type) -> dict[str, Any]:
+        raise NotImplemented("This is a bug in `nonesafe`!")  # Abstract class, but can't use ABC because dynamically created.
 
-def declare(
+def nsdict(
         name: str,
         dict_fields: Mapping[str, type] | Iterable[tuple[str, type]] | None = None,
         **kw_fields: type
@@ -33,13 +30,13 @@ def declare(
             dict_values: Mapping[str, Any] | Iterable[tuple[str, Any]] | None = None,
             **kw_values: Any
     ):
-        values: Final = {} if dict_values is None else dict(dict_values)
-        values.update(kw_values)
-        for n in list(values):  # Copy keys into a list; you can't delete from `values` whilst traversing `values`.
-            if n not in fields:
-                del values[n]
+        self._orig_values_: Final = {} if dict_values is None else dict(dict_values)
+        self._orig_values_.update(kw_values)
+        values = {k: v for k, v in self._orig_values_.items() if k in fields}
 
         for n, t in fields.items():
+            if n == '_orig_values_':
+                raise ValueError('Field nane `_orig_values_` is reserved.')
             n_in_vs = n in values
             if issubclass(t, _NSMarker):
                 if n_in_vs:
@@ -55,17 +52,33 @@ def declare(
                 v = values[n]
             else:
                 v = None
-            object.__setattr__(self, n, v)
+            setattr(self, n, v)
     new.__init__ = _init
 
     def _repr(self: type) -> str:
         return f'{name}({', '.join(f'{n}={repr(getattr(self, n))}' for n in fields)})'
     new.__repr__ = _repr
 
+    def _todict(self: type) -> dict[str, Any]:
+        for n in fields:
+            v = getattr(self, n)
+            if isinstance(v, _NSMarker):
+                self._orig_values_[n] = v.todict()
+            elif v is not None:
+                self._orig_values_[n] = v
+        return self._orig_values_
+    new.todict = _todict
+
     return new
 
-def onnone[T](value: T | None, otherwise: T) -> T:
-    return otherwise if value is None else value
+def nsget[T](value: T | None, default: T) -> T:
+    return default if value is None else value
+
+def nssub[T](subscriptable: Sequence[T] | Mapping[Any, T] | None, index: Any) -> T | None:
+    return None if subscriptable is None else subscriptable[index]
+
+def nscall[T](callable_: Callable[..., T] | None, *args: Any, **kwargs: Any) -> T | None:
+    return None if callable_ is None else callable_(*args, **kwargs)
 
 if __name__ == '__main__':
     from pathlib import Path
@@ -74,34 +87,3 @@ if __name__ == '__main__':
         from doctest import testfile
         print(f'`doctest` {readme}')
         testfile(readme)
-
-    print('Example of `nonesafe` usage')
-    C: Final = declare('C', d=int)
-    A: Final = declare('A', c=C)
-    print(vars(A))
-    print(f'{A({'c': {'d': 0}})=}')
-    print(f'{A([('c', [('c', 0)])])=}')
-    print(f'{A(c=C(d=0))=}')
-    print(f'{A()=}')
-    a_ok = A(c=C(d=0))
-    print(f'{a_ok=}')
-    print(f'{a_ok.c=}')
-    print(f'{a_ok.c.d=}')
-    a_none = A()
-    print(f'{a_none=}')
-    print(f'{a_none.c=}')
-    print(f'{a_none.c.d=}')
-    Safe: Final = declare('Safe', a=A, b=int)
-    print(f'{Safe({'a': {'c': {'d': 0}}, 'b': 1})=}')
-    print(f'{Safe([('a', [('c', [('d', 0)])]), ('b', 1)])=}')
-    print(f'{Safe(a=A(c=C(d=0)), b=1)=}')
-    print(f'{Safe()=}')
-    print(f'{Safe(not_a=A(c=C(d=0)), not_b=1)=}')
-    print(f'{Safe(not_a=A(c=C(d=0)), b=1)=}')
-    s_ok = Safe(a=A(c=C(d=0)), b=1)
-    print(f'{s_ok=}')
-    print(f'{s_ok.a=}')
-    print(f'{s_ok.a.c=}')
-    print(f'{s_ok.a.c.d=}')
-    print(f'{s_ok.b=}')
-    print(f'{onnone(None, -1)=}')
