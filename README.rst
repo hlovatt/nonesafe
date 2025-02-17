@@ -1,10 +1,10 @@
-===========
- None safe
-===========
+=========
+None safe
+=========
 
-----------------------------------------------------------------------
-``nonesafe``: safe to read, write, and read/modify/write external data
-----------------------------------------------------------------------
+-------------------------------------------------------------------------------------
+``nonesafe``: safe to read, write, and read/modify/write ``dicts`` from external data
+-------------------------------------------------------------------------------------
 
 Licenses
 ========
@@ -30,10 +30,10 @@ Motivation
 When parsing a dictionary from an external source,
 e.g. a JSON request,
 dictionary keys might be missing or
-there may be unknown dictionary keys or values might be None.
+there may be unknown dictionary keys or values might be ``None``.
 
 For example suppose you know (or only care about)
-keys ``a`` and `b` at the top level and that
+keys ``a`` and ``b`` at the top level and that
 ``a`` is also a dictionary that has a ``c``.
 
 >>> d_ok = {'a': {'c': 1}, 'b': 0}
@@ -47,7 +47,7 @@ This would be easy to use directly as a dictionary:
 >>> d_ok['b']
 0
 
-But if instead from the external source you got:
+But if instead ``d_ok`` from the external source you got:
 
 >>> d_not_ok = {'a': {'c': 1}, 'not_b': 0}
 
@@ -63,13 +63,15 @@ You could write safe accessor functions:
 ...     a = get_a(d)
 ...     return None if a is None else a.get('c', None)
 
-But there is an easier way:
+But "there must be a better way"
+(apologies to Raymond Hettinger):
 
 >>> from nonesafe import *
 >>> A = nsdict('A', c=int)
 >>> Safe = nsdict('Safe', a=A, b=int)
 
-``nsdict`` creates a new class that accepts a dict (or similar)
+``nsdict`` creates a new class who's constructor
+accepts a dict (or similar)
 and then copies the values from the dict into the new class.
 Missing values in the dict are replaced with ``None``.
 If an embedded dict is missing,
@@ -113,6 +115,9 @@ EG:
 >>> nssub([0], 0)
 0
 >>> nssub(None, 0)
+
+The intended use of ``nssub`` is lists that might be ``None``,
+``nsdict`` is generally better for ``dict``s.
 
 ``nscall(callable, *args, **kwargs)``
 takes a ``callable`` that might be ``None`` and if it is
@@ -193,6 +198,18 @@ There is a lot going on this example:
 
 Details
 =======
+The function ``nsdict`` makes a shallow copy of it's arguments.
+The shallow copy is first made ``dict_fields`` argument and
+then updated with the ``kw_fields`` arguments.
+Therefore:
+
+>>> Ex = nsdict('Ex', {'a': int}, a=A)
+
+Matches:
+
+>>> Ex({'a': {'c': 0}})
+Ex(a=A(c=0))
+
 The function ``nsdict`` is very flexible
 (following `Postel
 <https://en.wikipedia.org/wiki/Robustness_principle>`_),
@@ -204,9 +221,19 @@ the following are all the same as each other:
 >>> Ex3 = nsdict('Ex3', {'a': int}, b=int)
 >>> Ex4 = nsdict('Ex4', [('a', int)], b=int)
 
+There is a reserved field name ``__orig_values__`` that is
+used by ``todict`` to restore values from the original ``dict``.
+
+Like creating a class with``nsdict``; when an instance of
+the created class is instantiated,
+it too makes a shallow copy of its arguments.
+First ``dict_values`` and then ``kw_values``, therefore:
+
+>>> Ex({'a': 0}, a=A(c=0))
+Ex(a=A(c=0))
+
 Constructing an instance of a ``nonsafe`` class is also
-very flexible
-(again following `Postel
+very flexible (again following `Postel
 <https://en.wikipedia.org/wiki/Robustness_principle>`_),
 the following are all the same as each other:
 
@@ -264,7 +291,7 @@ Therefore, having an officially sanctioned approach,
 in ``stdlib``, has value.
 
 ``nonsafe`` can be used to read, write, and read/modify/write
-external data. For reading there are alternatives.
+external data. For reading only there are alternatives.
 
 Reading
 --------
@@ -308,7 +335,7 @@ and a proposal to revive it
 that failed to reach a consensus.
 505 proposed introducing new ``None`` aware operators
 ``??`` (same as ``nsget``), ``?.``, and ``?[]``
-(last too equivalent to ``nsdict``'s behaviour).
+(last two equivalent to ``nsdict``'s behaviour for ``dict``).
 This module is considerably easier to add
 than three operators
 (current proof on concept circa 100 lines)
@@ -317,6 +344,10 @@ Note operators also need to be added to IDE's,
 type-checkers, etc. and need to be taught.
 For newbies and none computer-science people they
 will be unfamiliar.
+There is an advantage with the 505 built in operators,
+they delay the evaluation of their right-hand argument.
+It is not possible to do this in Python except inside
+the compiler (as it does for ``and`` and ``or``).
 
 Writing
 -------
@@ -338,17 +369,32 @@ because of their size and complication.
 There are no good 3rd party or PEP alternatives
 available for writing and read/modify/writing.
 
+Personal note
+^^^^^^^^^^^^^
+My motivation for writing ``nonesafe`` came from a previous
+company where we supplied a wrapper around a JSON API
+to customers (that was built using dataclasses)
+and also from processing data from an internal Asana
+database (this code used Pandas).
+In both cases the ``nonesafe`` library would have been superior
+(but I hadn’t thought of it!).
+
 Possibilities for the future
 ============================
 In no particular order:
 
 1. Check field value is of correct type or ``None``
    (auto-convert if possible).
-   Presently ugly error!
+   JSON data can be painful where ``"0"`` or ``0`` can be
+   any of ``bool``, ``float``, or ``int``.
 2. ``field`` specifier that allows a custom type converter,
-   checkers for things like ranges, and defaults other than none.
+   checkers for things like ranges,
+   marking a field as required, and defaults other than ``None``.
 3. Allow ``nsdict`` to be used as a class decorator.
    Copy ``docstring`` from decorated classes.
+   Add something like ``__post_init__`` to check interrelated
+   field values.
 4. Add ``a.b.set(‘c’, default)`` - Note ``c`` has to be a
    leaf and is given separately as a  field name as a ``str``,
    used instead of ``a.b.c = nsget(a.b.c, default)``.
+5. Use ``__slots__``.

@@ -4,20 +4,26 @@ __license__ = "MIT https://opensource.org/licenses/MIT"
 __repository__ = "https://github.com/hlovatt/nonesafe"
 __version__ = "0.1.0"
 
-from abc import ABC, abstractmethod
 from collections.abc import Mapping, Iterable, Sequence, Callable
 from typing import Any, Final
 
-class _NSMarker:
-    def todict(self: type) -> dict[str, Any]:
-        raise NotImplemented("This is a bug in `nonesafe`!")  # Abstract class, but can't use ABC because dynamically created.
+class _NSDictMarker:
+    """Used as a marker for classes created by `nsdict` and helps type checking.
 
-def nsdict(
-        name: str,
-        dict_fields: Mapping[str, type] | Iterable[tuple[str, type]] | None = None,
-        **kw_fields: type
-) -> type:
-    new: Final = type(name, (_NSMarker, ), {})
+    Treat as an abstract class, but can't use `ABC` because the inherited classes are dynamically created.
+    """
+
+    # noinspection PyUnusedLocal
+    def __init__(self, dict_values: Mapping[str, Any] | Iterable[tuple[str, Any]] | None = None, **kw_values: Any):
+        self.__orig_values__ = {}  # Help type checker out! This `__init__` is never called!
+        raise NotImplemented("This is a bug in `nonesafe`!")
+
+    def todict(self) -> dict[str, Any]:
+        raise NotImplemented("This is a bug in `nonesafe`!")
+
+# Unfortunately can't use `__set_name__` instead of `name` arg because `__set_name__` only works inside classes.
+def nsdict(name: str, dict_fields: Mapping[str, type] | Iterable[tuple[str, type]] | None = None, **kw_fields: type) -> type:
+    new: Final = type(name, (_NSDictMarker,), {})
 
     if not dict_fields and not kw_fields:
         raise ValueError('Both `{dict_fields=}` and `{kw_fields=}` cannot be empty.')
@@ -25,23 +31,19 @@ def nsdict(
     fields: Final = {} if dict_fields is None else dict(dict_fields)
     fields.update(kw_fields)
 
-    def _init(
-            self: type,
-            dict_values: Mapping[str, Any] | Iterable[tuple[str, Any]] | None = None,
-            **kw_values: Any
-    ):
-        self._orig_values_: Final = {} if dict_values is None else dict(dict_values)
-        self._orig_values_.update(kw_values)
-        values = {k: v for k, v in self._orig_values_.items() if k in fields}
+    def _init(self: _NSDictMarker, dict_values: Mapping[str, Any] | Iterable[tuple[str, Any]] | None = None, **kw_values: Any):
+        self.__orig_values__ = {} if dict_values is None else dict(dict_values)
+        self.__orig_values__.update(kw_values)
+        values = {k: v for k, v in self.__orig_values__.items() if k in fields}
 
         for n, t in fields.items():
-            if n == '_orig_values_':
-                raise ValueError('Field nane `_orig_values_` is reserved.')
+            if n == '__orig_values__':
+                raise ValueError('Field nane `__orig_values__` is reserved.')
             n_in_vs = n in values
-            if issubclass(t, _NSMarker):
+            if issubclass(t, _NSDictMarker):
                 if n_in_vs:
                     value = values[n]
-                    if isinstance(value, _NSMarker):
+                    if isinstance(value, _NSDictMarker):
                         v = value
                     else:
                         # noinspection PyArgumentList
@@ -55,18 +57,18 @@ def nsdict(
             setattr(self, n, v)
     new.__init__ = _init
 
-    def _repr(self: type) -> str:
+    def _repr(self: _NSDictMarker) -> str:
         return f'{name}({', '.join(f'{n}={repr(getattr(self, n))}' for n in fields)})'
     new.__repr__ = _repr
 
-    def _todict(self: type) -> dict[str, Any]:
+    def _todict(self: _NSDictMarker) -> dict[str, Any]:
         for n in fields:
             v = getattr(self, n)
-            if isinstance(v, _NSMarker):
-                self._orig_values_[n] = v.todict()
+            if isinstance(v, _NSDictMarker):
+                self.__orig_values__[n] = v.todict()
             elif v is not None:
-                self._orig_values_[n] = v
-        return self._orig_values_
+                self.__orig_values__[n] = v
+        return self.__orig_values__
     new.todict = _todict
 
     return new
