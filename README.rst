@@ -16,9 +16,13 @@ Rest
 
 Installation
 ============
-Simply copy
+::
+  pip install --upgrade nonesafe
+
+Or copy
 `nonesafe.py
 <https://github.com/hlovatt/nonesafe/nonesafe.py>`_
+into current folder
 (note
 `LICENCE <https://github.com/hlovatt/nonesafe/LICENSE>`_),
 run some examples by executing ``nonesafe.py``
@@ -36,39 +40,40 @@ For example suppose you know (or only care about)
 keys ``a`` and ``b`` at the top level and that
 ``a`` is also a dictionary that has a ``c``.
 
->>> d_ok = {'a': {'c': 1}, 'b': 0}
+::
+  >>> d_ok = {'a': {'c': 1}, 'b': 0}
 
-This would be easy to use directly as a dictionary:
+This would be easy to use directly as a dictionary::
 
->>> d_ok['a']
-{'c': 1}
->>> d_ok['a']['c']
-1
->>> d_ok['b']
-0
+  >>> d_ok['a']
+  {'c': 1}
+  >>> d_ok['a']['c']
+  1
+  >>> d_ok['b']
+  0
 
-But if instead ``d_ok`` from the external source you got:
+But if instead ``d_ok`` from the external source you got::
 
->>> d_not_ok = {'a': {'c': 1}, 'not_b': 0}
+  >>> d_not_ok = {'a': {'c': 1}, 'not_b': 0}
 
 Then the code above using a dictionary would fail.
-You could write safe accessor functions:
+You could write safe accessor functions::
 
->>> from typing import Any
->>> def get_a(d: dict[str, Any] | None) -> Any | None:
-...     return None if d is None else d.get('a', None)
->>> def get_b(d: dict[str, Any] | None) -> Any | None:
-...     return None if d is None else d.get('b', None)
->>> def get_a_c(d: dict[str, Any] | None) -> Any | None:
-...     a = get_a(d)
-...     return None if a is None else a.get('c', None)
+  >>> from typing import Any
+  >>> def get_a(d: dict[str, Any] | None) -> Any | None:
+  ...     return None if d is None else d.get('a', None)
+  >>> def get_b(d: dict[str, Any] | None) -> Any | None:
+  ...     return None if d is None else d.get('b', None)
+  >>> def get_a_c(d: dict[str, Any] | None) -> Any | None:
+  ...     a = get_a(d)
+  ...     return None if a is None else a.get('c', None)
 
 But "there must be a better way"
-(apologies to Raymond Hettinger):
+(apologies to Raymond Hettinger)::
 
->>> from nonesafe import *
->>> A = nsdict('A', c=int)
->>> Safe = nsdict('Safe', a=A, b=int)
+  >>> from nonesafe import *
+  >>> A = nsdict('A', c=int)
+  >>> Safe = nsdict('Safe', a=A, b=int)
 
 ``nsdict`` creates a new class who's constructor
 accepts a dict (or similar)
@@ -81,12 +86,13 @@ In the example there are two classes created ``A``
 and ``Safe``,
 two classes because there is a nested dictionary in the data.
 
->>> s = Safe(d_not_ok)
->>> s.a
-A(c=1)
->>> s.a.c
-1
->>> s.b
+::
+  >>> s = Safe(d_not_ok)
+  >>> s.a
+  A(c=1)
+  >>> s.a.c
+  1
+  >>> s.b
 
 The missing value ``b`` is replaced by ``None``
 (in the ``doctest`` above ``None`` is treated as not
@@ -101,65 +107,66 @@ There is also three utility functions.
 ``nsget(value, default)``
 takes a ``value`` that might be ``None`` and if it is
 returns ``default``.
-EG:
+EG::
 
->>> nsget(s.b, -1)
--1
+  >>> nsget(s.b, -1)
+  -1
 
 ``nssub(subscriptable, index)``
 takes a ``lst`` that might be ``None`` and if it is
 returns ``None``, else returns ``subscriptable`` subscripted
 by ``index``.
-EG:
+EG::
 
->>> nssub([0], 0)
-0
->>> nssub(None, 0)
+  >>> nssub([0], 0)
+  0
+  >>> nssub(None, 0)
 
-The intended use of ``nssub`` is lists that might be ``None``,
-``nsdict`` is generally better for ``dict``s.
+The intended use of ``nssub`` is a list that might be ``None``,
+``nsdict`` is generally better for a ``dict``.
 
 ``nscall(callable, *args, **kwargs)``
 takes a ``callable`` that might be ``None`` and if it is
 returns ``None``, else returns ``callable`` called with
 ``args`` and ``kwargs``.
-EG:
+EG::
 
->>> nscall(lambda x, y: (x, y), 0, y=1)
-(0, 1)
->>> nscall(None)
+  >>> nscall(lambda x, y: (x, y), 0, y=1)
+  (0, 1)
+  >>> nscall(None)
 
 The above has only discussed reading external data.
 Hand coding safe writing is cumbersome.
 
->>> def set_a(d: dict[str, Any] | None, value: Any) -> dict[str, Any]:
-...     if d is None:
-...         d = {}
-...     d['a'] = value
-...     return d
->>> def set_b(d: dict[str, Any] | None, value: Any) -> dict[str, Any]:
-...     if d is None:
-...         d = {}
-...     d['b'] = value
-...     return d
->>> def set_a_c(d: dict[str, Any] | None, value: Any) -> dict[str, Any]:
-...     if d is None:
-...         d = {}
-...     a = d.get('a', {})
-...     a['c'] = value
-...     return d
+::
+  >>> def set_a(d: dict[str, Any] | None, value: Any) -> dict[str, Any]:
+  ...     if d is None:
+  ...         d = {}
+  ...     d['a'] = value
+  ...     return d
+  >>> def set_b(d: dict[str, Any] | None, value: Any) -> dict[str, Any]:
+  ...     if d is None:
+  ...         d = {}
+  ...     d['b'] = value
+  ...     return d
+  >>> def set_a_c(d: dict[str, Any] | None, value: Any) -> dict[str, Any]:
+  ...     if d is None:
+  ...         d = {}
+  ...     a = d.get('a', {})
+  ...     a['c'] = value
+  ...     return d
 
-Writing is much easier using ``nonesafe`` than the above, EG:
+Writing is much easier using ``nonesafe`` than the above, EG::
 
->>> out = Safe()
+  >>> out = Safe()
 
 Just an instance of the required safe version of the dict
 is needed.
-In use:
+In use::
 
->>> out.a.c = 0
->>> out.todict()
-{'a': {'c': 0}}
+  >>> out.a.c = 0
+  >>> out.todict()
+  {'a': {'c': 0}}
 
 Note how the embedded dict is auto-created and the ``b`` field
 which is ``None`` is omitted to reduce payload size
@@ -170,19 +177,19 @@ cumbersome to hand code
 (more so than reading and writing alone)
 and therefore the hand code is not shown.
 With ``nonesafe`` it is easy.
-Consider a particularly tricky example, suppose we read:
+Consider a particularly tricky example, suppose we read::
 
->>> tricky = {'b': None, 'unknown': 'u'}
+  >>> tricky = {'b': None, 'unknown': 'u'}
 
-Then added in ``a.c``:
+Then added in ``a.c``::
 
->>> st = Safe(tricky)
->>> st.a.c = 0
+  >>> st = Safe(tricky)
+  >>> st.a.c = 0
 
-Finally write it out again:
+Finally write it out again::
 
->>> st.todict()
-{'b': None, 'unknown': 'u', 'a': {'c': 0}}
+  >>> st.todict()
+  {'b': None, 'unknown': 'u', 'a': {'c': 0}}
 
 There is a lot going on this example:
 
@@ -201,25 +208,25 @@ Details
 The function ``nsdict`` makes a shallow copy of it's arguments.
 The shallow copy is first made ``dict_fields`` argument and
 then updated with the ``kw_fields`` arguments.
-Therefore:
+Therefore::
 
->>> Ex = nsdict('Ex', {'a': int}, a=A)
+  >>> Ex = nsdict('Ex', {'a': int}, a=A)
 
-Matches:
+Matches::
 
->>> Ex({'a': {'c': 0}})
-Ex(a=A(c=0))
+  >>> Ex({'a': {'c': 0}})
+  Ex(a=A(c=0))
 
 The function ``nsdict`` is very flexible
 (following `Postel
 <https://en.wikipedia.org/wiki/Robustness_principle>`_),
-the following are all the same as each other:
+the following are all the same as each other::
 
->>> Ex0 = nsdict('Ex0', {'a': int, 'b': int})
->>> Ex1 = nsdict('Ex1', [('a', int), ('b', int)])
->>> Ex2 = nsdict('Ex2', a=int, b=int)
->>> Ex3 = nsdict('Ex3', {'a': int}, b=int)
->>> Ex4 = nsdict('Ex4', [('a', int)], b=int)
+  >>> Ex0 = nsdict('Ex0', {'a': int, 'b': int})
+  >>> Ex1 = nsdict('Ex1', [('a', int), ('b', int)])
+  >>> Ex2 = nsdict('Ex2', a=int, b=int)
+  >>> Ex3 = nsdict('Ex3', {'a': int}, b=int)
+  >>> Ex4 = nsdict('Ex4', [('a', int)], b=int)
 
 There is a reserved field name ``__orig_values__`` that is
 used by ``todict`` to restore values from the original ``dict``.
@@ -227,28 +234,28 @@ used by ``todict`` to restore values from the original ``dict``.
 Like creating a class with``nsdict``; when an instance of
 the created class is instantiated,
 it too makes a shallow copy of its arguments.
-First ``dict_values`` and then ``kw_values``, therefore:
+First ``dict_values`` and then ``kw_values``, therefore::
 
->>> Ex({'a': 0}, a=A(c=0))
-Ex(a=A(c=0))
+  >>> Ex({'a': 0}, a=A(c=0))
+  Ex(a=A(c=0))
 
 Constructing an instance of a ``nonsafe`` class is also
 very flexible (again following `Postel
 <https://en.wikipedia.org/wiki/Robustness_principle>`_),
-the following are all the same as each other:
+the following are all the same as each other::
 
->>> ex0 = Ex0({'a': 0, 'b': 1})
->>> ex1 = Ex0([('a', 0), ('b', 1)])
->>> ex2 = Ex0(a=0, b=1)
->>> ex3 = Ex0({'a': 0}, b=1)
->>> ex4 = Ex0([('a', 0)], b=1)
+  >>> ex0 = Ex0({'a': 0, 'b': 1})
+  >>> ex1 = Ex0([('a', 0), ('b', 1)])
+  >>> ex2 = Ex0(a=0, b=1)
+  >>> ex3 = Ex0({'a': 0}, b=1)
+  >>> ex4 = Ex0([('a', 0)], b=1)
 
-and these are also the same as each other:
+and these are also the same as each other::
 
->>> ex5 = Ex0({})
->>> ex6 = Ex0([])
->>> ex7 = Ex0(None)
->>> ex8 = Ex0()
+  >>> ex5 = Ex0({})
+  >>> ex6 = Ex0([])
+  >>> ex7 = Ex0(None)
+  >>> ex8 = Ex0()
 
 Alternatives
 ============
