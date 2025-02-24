@@ -10,7 +10,7 @@ def read_text(file_name: str) -> str:
 
 setuptools.setup(
     name="nonesafe",
-    version="0.1.6",
+    version="0.1.7",
     url=nonesafe.__repository__,
     license="MIT License",  # Can only have one line `license`; setuptools bug.
     author=nonesafe.__author__,

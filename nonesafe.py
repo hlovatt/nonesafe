@@ -2,7 +2,7 @@ __author__ = "Howard C Lovatt."
 __copyright__ = "Howard C Lovatt, 2025 onwards."
 __license__ = "MIT https://opensource.org/licenses/MIT"
 __repository__ = "https://github.com/hlovatt/nonesafe"
-__version__ = "0.1.6"  # Version set by https://github.com/hlovatt/tag2ver
+__version__ = "0.1.7"  # Version set by https://github.com/hlovatt/tag2ver
 
 from collections.abc import Mapping, Iterable, Sequence, Callable
 from typing import Any, Final

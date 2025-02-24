@@ -17,6 +17,7 @@ Rest
 Installation
 ============
 ::
+
   pip install --upgrade nonesafe
 
 Or copy
@@ -41,6 +42,7 @@ keys ``a`` and ``b`` at the top level and that
 ``a`` is also a dictionary that has a ``c``.
 
 ::
+
   >>> d_ok = {'a': {'c': 1}, 'b': 0}
 
 This would be easy to use directly as a dictionary::
@@ -87,6 +89,7 @@ and ``Safe``,
 two classes because there is a nested dictionary in the data.
 
 ::
+
   >>> s = Safe(d_not_ok)
   >>> s.a
   A(c=1)
@@ -139,6 +142,7 @@ The above has only discussed reading external data.
 Hand coding safe writing is cumbersome.
 
 ::
+
   >>> def set_a(d: dict[str, Any] | None, value: Any) -> dict[str, Any]:
   ...     if d is None:
   ...         d = {}
@@ -181,7 +185,7 @@ Consider a particularly tricky example, suppose we read::
 
   >>> tricky = {'b': None, 'unknown': 'u'}
 
-Then added in ``a.c``::
+Then you wish to add in ``a.c``::
 
   >>> st = Safe(tricky)
   >>> st.a.c = 0
