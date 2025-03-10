@@ -105,7 +105,7 @@ The usage ``s.expr`` indicates safe
 (will not raise an access exception but might 
 return ``None`` instead).
 
-There is also three utility functions.
+There are also three utility functions.
 
 ``nsget(value, default)``
 takes a ``value`` that might be ``None`` and if it is
@@ -235,7 +235,7 @@ the following are all the same as each other::
 There is a reserved field name ``__orig_values__`` that is
 used by ``todict`` to restore values from the original ``dict``.
 
-Like creating a class with``nsdict``; when an instance of
+Like creating a class with ``nsdict``; when an instance of
 the created class is instantiated,
 it too makes a shallow copy of its arguments.
 First ``dict_values`` and then ``kw_values``, therefore::
